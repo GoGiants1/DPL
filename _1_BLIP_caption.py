@@ -33,9 +33,13 @@ if __name__=="__main__":
         dirname=args.input_image
         dirs = [os.path.join(dirname, dir) for dir in dirs]
         dirs.sort()
+    else:
+        dirs=[args.input_image]
+        print("image path is http link!")
+        
 
-    print(f'The image base is {dirname}')
-    print('\n'.join(dirs))
+    # print(f'The image base is {dirname}')
+    # print('\n'.join(dirs))
 
     text = args.prompt_str
     img_ids=[]
@@ -44,10 +48,22 @@ if __name__=="__main__":
     processor = AutoProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
     model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base")
 
+    
     for img_path in dirs[:]:
         print(img_path)
-        
-        if os.path.isdir(args.input_image):
+        image = None
+        if img_path.startswith('http'):
+            # download the image and save it locally
+            from diffusers.utils.loading_utils import load_image
+            image = load_image(img_path)
+
+            # paths are http://.../image.jpg
+            img_id = img_path.split('/')[-1].split('.')[0]
+            image.save(f"images/{img_id}.png",)
+
+            _results_folder = os.path.join(args.results_folder, f"{img_id}")
+
+        elif os.path.isdir(args.input_image):
             search_text = img_path.split('/')[-2]
             img_id = img_path.split('/')[-1].split('.')[0]
             _results_folder = os.path.join(args.results_folder, f"{search_text}_{img_id}")
@@ -59,8 +75,9 @@ if __name__=="__main__":
         print(_results_folder)
         if WRITE2FILE:
             os.makedirs(_results_folder, exist_ok=True)
-        
-        image = Image.open(img_path)
+        if image is None:
+            image = Image.open(img_path)
+
         inputs = processor(images=image, text=text, return_tensors="pt")
 
         generated_ids = model.generate(**inputs)

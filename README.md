@@ -15,7 +15,7 @@ The required packages are listed in *"torch2.yml"*
 For images without captions, we used the [BLIP](https://huggingface.co/docs/transformers/main/model_doc/blip) model to generate image captions. You can change it into [BLIP-2](https://huggingface.co/docs/transformers/main/model_doc/blip-2) for better performance.
 
 ```
-python _1_BLIP_caption.py --input_image IMAGE_FILE --results_folder ./output
+python _1_BLIP_caption.py --input_image https://huggingface.co/datasets/GoGiants1/TMDBEval500/resolve/main/TMDBEval500/images/10.jpg --results_folder ./output
 ```
 
 ### 2. DDIM inversion and feature visualizations
@@ -23,7 +23,7 @@ python _1_BLIP_caption.py --input_image IMAGE_FILE --results_folder ./output
 We apply DDIM inversion to get the initial noise and also visualize all attentions and features with clustering or PCA visualization as we showed in the paper.
 
 ```
-python _2_DDIM_inv.py --input_image IMAGE_FILE --results_folder ./output
+python _2_DDIM_inv.py --input_image https://huggingface.co/datasets/GoGiants1/TMDBEval500/resolve/main/TMDBEval500/images/12.jpg --results_folder ./output
 ```
 
 ### 3. DPL inversion

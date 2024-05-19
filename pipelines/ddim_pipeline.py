@@ -18,7 +18,7 @@ from transformers import (
 )
 
 from diffusers.models import AutoencoderKL, UNet2DConditionModel
-from diffusers.models.cross_attention import CrossAttention
+from diffusers.models.attention import Attention
 from diffusers.schedulers import DDIMScheduler, DDPMScheduler, EulerAncestralDiscreteScheduler, LMSDiscreteScheduler
 from diffusers.schedulers.scheduling_ddim_inverse import DDIMInverseScheduler
 from diffusers.utils import (
@@ -27,9 +27,9 @@ from diffusers.utils import (
     is_accelerate_available,
     is_accelerate_version,
     logging,
-    randn_tensor,
     replace_example_docstring,
 )
+from diffusers.utils.torch_utils import randn_tensor
 from diffusers.pipelines.pipeline_utils import DiffusionPipeline
 from diffusers.pipelines.stable_diffusion import StableDiffusionPipelineOutput
 from diffusers.pipelines.stable_diffusion.safety_checker import StableDiffusionSafetyChecker
@@ -52,7 +52,7 @@ class AttendExciteCrossAttnProcessor:
 
     def __call__(
         self, 
-        attn: CrossAttention, 
+        attn: Attention, 
         hidden_states, 
         encoder_hidden_states=None, 
         attention_mask=None

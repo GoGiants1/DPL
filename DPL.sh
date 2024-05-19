@@ -1,18 +1,18 @@
 ### 1st step: get the background mask and inversion files for DPL
-IMG_FORMAT='jpg'
-IMG_FOLDER='images/'
-FILE_NAME='catdog'
+IMG_FORMAT='png'
+IMG_FOLDER='images'
+FILE_NAME='10'
 
-CUDA_VISIBLE_DEVICES=1 python _2_DDIM_inv.py \
+CUDA_VISIBLE_DEVICES=0 python _2_DDIM_inv.py \
     --input_image ${IMG_FOLDER}/${FILE_NAME}.${IMG_FORMAT} \
     --results_folder output/ \
 
 ### 2nd step: Dynamic Prompt Learning
-PLACEHOLDER1='<cat-toy>'
-PLACEHOLDER2='<dog-toy>'
+PLACEHOLDER1='<Pear-Bear>'
+PLACEHOLDER2='<Bear-Cheer>'
 
-INIT_TOKEN1='cat'
-INIT_TOKEN2='dog'
+INIT_TOKEN1='Pear'
+INIT_TOKEN2='Bear'
 
 MAX_ITER=0
 LOSS='max'
@@ -33,7 +33,7 @@ be_ATTN=0.3
 be_BG=0.7
 be_COSINE=0.9
 
-CUDA_VISIBLE_DEVICES=0 python _3_dpl_inv.py \
+CUDA_VISIBLE_DEVICES=1 python _3_dpl_inv.py \
     --input_image ${IMG_FOLDER}/${FILE_NAME}.${IMG_FORMAT} \
     --results_folder output/${FILE_NAME}/ \
     --negative_guidance_scale 7.5 \

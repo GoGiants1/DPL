@@ -143,28 +143,51 @@ if __name__=="__main__":
         inv_latents[ind] = inv_latents[ind].cpu().cuda()
     
     ### NOTE: include prompt files if provides
+    caption = None
     if args.prompt_file is None:
-        args.prompt_file=os.path.join(args.results_folder, f"prompt.txt")
+        # args.prompt_file=os.path.join(args.results_folder, f"prompt.txt")
         
-    if os.path.isfile(args.prompt_file):
-        caption_list = open(args.prompt_file).read().strip().split(' ')
-        args.indices_to_alter=[]
-        for ind in range(len(placeholder_token_id)):
-            if args.initializer_token[ind] in caption_list:
-                plh_id = caption_list.index(args.initializer_token[ind])
-            else:
-                continue
-            caption_list[plh_id] = args.placeholder_token[ind]
-            ### NOTE: change this part to create a new list
-            args.indices_to_alter.append(plh_id+1) 
-            caption=' '.join(caption_list)
-        print(f'taking caption from file: \"{caption}\"')
-        print(f'alter the indices: {args.indices_to_alter}')
-    else:
-        caption=args.prompt_str
-        print(f'taking caption from args: \"{caption}\"')
-        print(f'alter the indices: {args.indices_to_alter}')
+        img_id = args.input_image.split('/')[-1].split('.')[0]
+        print("in dpl inv : image id is ", img_id)
+        caption_txt_link = "https://huggingface.co/datasets/GoGiants1/TMDBEval500/resolve/main/TMDBEval500/TMDBEval500.txt"
+
+        import requests
+        r = requests.get(caption_txt_link)
+        # read the file and get the caption by image index
+        caption = r.text.split('\n')[int(img_id)]
         
+        
+    # if os.path.isfile(args.prompt_file):
+    #     caption_list = open(args.prompt_file).read().strip().split(' ')
+    #     args.indices_to_alter=[]
+    #     for ind in range(len(placeholder_token_id)):
+    #         if args.initializer_token[ind] in caption_list:
+    #             plh_id = caption_list.index(args.initializer_token[ind])
+    #         else:
+    #             continue
+    #         caption_list[plh_id] = args.placeholder_token[ind]
+    #         ### NOTE: change this part to create a new list
+    #         args.indices_to_alter.append(plh_id+1) 
+    #         caption=' '.join(caption_list)
+    #     print(f'taking caption from file: \"{caption}\"')
+    #     print(f'alter the indices: {args.indices_to_alter}')
+    # else:
+    #     caption=args.prompt_str
+    #     print(f'taking caption from args: \"{caption}\"')
+    #     print(f'alter the indices: {args.indices_to_alter}')
+    
+    args.indices_to_alter = []
+    caption = caption.replace("'",'')
+    caption_list = caption.strip().split(' ')
+    for ind in range(len(placeholder_token_id)):
+        if args.initializer_token[ind] in caption_list:
+            plh_id = caption.index(args.initializer_token[ind])
+        else:
+            continue
+        args.indices_to_alter.append(plh_id+1)
+        caption = caption.replace(args.initializer_token[ind], args.placeholder_token[ind])
+        print(f'alter the indices: {args.indices_to_alter}')
+    print(f'taking caption from args: \"{caption}\"')
     ######## ================================================
     ### NOTE: read segmentation maps
     # BG_maps=[]

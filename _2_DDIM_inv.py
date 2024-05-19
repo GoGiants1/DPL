@@ -4,6 +4,7 @@ from PIL import Image
 
 from pipelines.scheduler_inv import DDIMInverseScheduler
 from pipelines.ddim_pipeline import StableDiffusionDDIMInvPipeline
+from transformers import AutoProcessor, BlipForConditionalGeneration, Blip2Config,Blip2Processor, Blip2ForConditionalGeneration
 
 import argparse
 import os
@@ -54,6 +55,14 @@ if __name__=="__main__":
     pipeline.scheduler = DDIMScheduler.from_config(pipeline.scheduler.config)
     pipeline.inverse_scheduler = DDIMInverseScheduler.from_config(pipeline.scheduler.config)
     pipeline.to("cuda")
+    
+    # configuration = Blip2Config()
+
+    # processor = processor = Blip2Processor.from_pretrained("Salesforce/blip2-opt-2.7b")
+    # model = Blip2ForConditionalGeneration.from_pretrained(
+    # "Salesforce/blip2-opt-2.7b", load_in_8bit=True, device_map={"": 0}, torch_dtype=torch.float16
+    # )
+
 
     if os.path.isfile(args.input_image):
         dirs=[args.input_image]
@@ -64,10 +73,51 @@ if __name__=="__main__":
         dirname=args.input_image
         dirs = [os.path.join(dirname, dir) for dir in dirs]
         dirs.sort()
+    else:
+        dirs=[args.input_image]
+        print("image path is http link!")
 
     for img_path in dirs[:]:
         print(img_path)
-        if os.path.isdir(args.input_image):
+        image = None
+        caption = None
+        if img_path.startswith('http'):
+            # download the image and save it locally
+            from diffusers.utils.loading_utils import load_image
+            image = load_image(img_path)
+
+            # paths are http://.../image.jpg
+            img_id = img_path.split('/')[-1].split('.')[0]
+            img_path = f"./images/{img_id}.png"
+            image.save(img_path)
+
+            # download image caption from the internet
+            caption_txt_link = "https://huggingface.co/datasets/GoGiants1/TMDBEval500/resolve/main/TMDBEval500/TMDBEval500.txt"
+
+            import requests
+            r = requests.get(caption_txt_link)
+            # read the file and get the caption by image index
+            caption = r.text.split('\n')[int(img_id)]
+            # want to extract text in "" or ''. using regex
+            import re
+            # text_in_double_quote = re.findall(r'"([^"]*)"', caption)
+            # text_in_single_quote = re.findall(r"'([^']*)'", caption)
+            # print("text_in_double_quote: ", text_in_double_quote)
+            # print("text_in_single_quote: ", text_in_single_quote)
+
+            print(f'caption: {caption}')
+
+            # inputs = processor(images=image, text="", return_tensors="pt")
+
+            # generated_ids = model.generate(**inputs)
+            # generated_text = processor.batch_decode(generated_ids, skip_special_tokens=True)[0].strip()
+            # print(generated_text)
+
+            caption = caption
+            print(caption)
+            _results_folder = os.path.join(args.results_folder, f"{img_id}")
+        
+        elif os.path.isdir(args.input_image):
             search_text = img_path.split('/')[-2]
             img_id = img_path.split('/')[-1].split('.')[0]
             _results_folder = os.path.join(args.results_folder, f"{search_text}_{img_id}")
@@ -88,22 +138,38 @@ if __name__=="__main__":
         os.makedirs(os.path.join(_results_folder, "attn_denoise"), exist_ok=True)
 
         bname = img_id
-
-        raw_image = Image.open(img_path).convert("RGB").resize((512, 512))
-        raw_image.save(os.path.join(_results_folder, f"org_img/{bname}.png"))
-
-        if args.prompt_file is None and (not args.manual_prompt):
-            prompt_file=os.path.join(_results_folder, f"prompt.txt")
-            caption = open(prompt_file).read().strip()
-            print(f'taking caption from file {prompt_file}: \"{caption}\"')
-            
-        elif args.prompt_file is not None and (not args.manual_prompt):
-            prompt_file=args.prompt_file
-            caption = open(prompt_file).read().strip()
-            print(f'taking caption from file {prompt_file}: \"{caption}\"')
+        if image is None:
+            raw_image = Image.open(img_path).convert("RGB").resize((512, 512))
         else:
-            caption=args.prompt_str
-            print(f'taking caption from args: \"{caption}\"  and we are {args.manual_prompt} forcing manual input ')
+            raw_image = image.convert("RGB").resize((512, 512))
+        raw_image.save(os.path.join(_results_folder, f"org_img/{bname}.png"))
+        if caption is None:
+            if args.prompt_file is None and (not args.manual_prompt):
+                prompt_file=os.path.join(_results_folder, f"prompt.txt")
+        
+
+                try:
+                    caption = open(prompt_file).read().strip()
+                    print(f'taking caption from file {prompt_file}: \"{caption}\"')
+                except FileNotFoundError as e:
+                    caption_txt_link = "https://huggingface.co/datasets/GoGiants1/TMDBEval500/resolve/main/TMDBEval500/TMDBEval500.txt"
+                
+                    import requests
+                    r = requests.get(caption_txt_link)
+                    # read the file and get the caption by image index
+                    caption = r.text.split('\n')[int(img_id)]
+                    caption = caption.replace("'", "")
+                    print(f'caption: {caption}')
+                    
+                
+            elif args.prompt_file is not None and (not args.manual_prompt):
+                prompt_file=args.prompt_file
+                caption = open(prompt_file).read().strip()
+                print(f'taking caption from file {prompt_file}: \"{caption}\"')
+            else:
+                caption=args.prompt_str
+
+                print(f'taking caption from args: \"{caption}\"  and we are {args.manual_prompt} forcing manual input ')
 
         generator = torch.manual_seed(0)
         all_latents, image, inv_self_avg_dict, inv_cross_avg_dict = pipeline(caption, 
@@ -197,6 +263,8 @@ if __name__=="__main__":
         #                        indice=1, save_path=os.path.join(_results_folder, 'sd_study'),
         #                        save_crossattn=True,
         #                        ).cpu().item()
+
+        print("image_path: ", img_path)
                 
         save_crossattn(img_path, caption, inv_cross_avg_dict, denoise_cross_avg_dict, _results_folder, RES=16)
 
@@ -206,6 +274,9 @@ if __name__=="__main__":
         num_segments=5
         threshold=0.2
         
+        nltk.download('punkt')
+        nltk.download('averaged_perceptron_tagger')
+
         tokenized_prompt = nltk.word_tokenize(caption)
         nouns = [(i, word) for (i, (word, pos)) in enumerate(nltk.pos_tag(tokenized_prompt)) if pos[:2] == 'NN']
         print(nouns)
